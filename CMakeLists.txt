@@ -10,7 +10,7 @@ include_directories("src")
 file(GLOB_RECURSE SRCS "src/*.c")
 file(GLOB_RECURSE HDRS "src/*.h")
 
-add_library(${PROJECT_NAME} ${SRCS})
+add_library(${PROJECT_NAME} SHARED ${SRCS})
 
 # install
 include(GNUInstallDirs)
