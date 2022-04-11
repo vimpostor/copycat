@@ -2,8 +2,9 @@
 #define _GNU_SOURCE
 
 #include <dlfcn.h>
-#include <stdlib.h>
+#include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 
