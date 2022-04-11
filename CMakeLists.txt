@@ -8,7 +8,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
-include_directories("src/lib")
+include_directories("src/lib" "src/bin")
 
 file(GLOB_RECURSE LIB_SRCS "src/lib/*.c")
 file(GLOB_RECURSE BIN_SRCS "src/bin/*.c")

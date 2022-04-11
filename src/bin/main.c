@@ -1,11 +1,7 @@
-// needed for execvpe
-#define _GNU_SOURCE
-#include <unistd.h>
 #include <getopt.h>
 
 #include "copycat.h"
-
-#define MAX_ENV_SIZE 256
+#include "ld_preload.h"
 
 void show_usage() {
 	printf("Usage: copycat /path/to/program\n");
@@ -24,7 +20,6 @@ int main(int argc, char *argv[])
 		{ NULL, 0, NULL, 0 }
 	};
 	while ((opt = getopt_long(argc, argv, "hn", long_opts, &opt_index)) != -1) {
-		// right now we have no arguments, we only want to get the trailing argument
 		switch (opt) {
 		case 'h':
 			show_help = true;
@@ -41,29 +36,21 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	// copy environment to add our own
-	char *env[MAX_ENV_SIZE];
-	size_t env_size = 0; // holds the size of the dynamically allocated part, the real size is 2 greater
-	for (size_t i = 0; i < MAX_ENV_SIZE - 2 && environ[i] != NULL; ++i) {
-		env[i] = strdup(environ[i]);
-		env_size++;
-	}
-	env[env_size] = "LD_PRELOAD=/usr/lib/libcopycat.so"; // TODO: Fix the hardcoded path
-	env[env_size + 1] = NULL;
-
 	int status_code = EXIT_SUCCESS;
 	if (show_help || argv[optind] == NULL) {
 		show_usage();
 	} else {
-		status_code = execvpe(argv[optind], argv + optind, env);
-		if (status_code == -1) {
-			perror(argv[optind]);
+		// actually run the executable
+		const char *program = argv[optind];
+		char **const program_args = argv + optind;
+		if (use_ptrace) {
+			// ptrace
+			fprintf(stderr, "ptrace not implemented yet");
+			status_code = EXIT_FAILURE;
+		} else {
+			// LD_PRELOAD
+			status_code = ld_exec(program, program_args);
 		}
-	}
-
-	// free environment again
-	for (size_t i = 0; i < env_size; ++i) {
-		free(env[i]);
 	}
 
 	return status_code;
