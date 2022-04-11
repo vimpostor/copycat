@@ -10,6 +10,8 @@
 #define COPYCAT_ENV "COPYCAT"
 char *copycat_env;
 
+#define COPYCAT_CONFIG ".copycat.conf"
+
 #define MAX_RULES_SIZE 64
 struct rule_t {
 	const char *source;
@@ -24,7 +26,9 @@ struct original_calls {
 	int (*openat)(int dirfd, const char *pathname, int flags, mode_t mode);
 } original_calls;
 
+void parse_rule(char *line);
 void parse_rules(char *rls);
+void read_config();
 void init() __attribute__((constructor));
 void fini() __attribute__((destructor));
 int openat(int dirfd, const char *pathname, int flags, mode_t mode);
