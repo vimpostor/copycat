@@ -34,6 +34,9 @@ int main(int argc, char *argv[])
 		show_usage();
 	} else {
 		status_code = execvpe(argv[optind], argv + optind, env);
+		if (status_code == -1) {
+			perror(argv[optind]);
+		}
 	}
 
 	// free environment again
