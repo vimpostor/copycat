@@ -39,12 +39,12 @@ void fini() {
 }
 
 int openat(int dirfd, const char *pathname, int flags, mode_t mode) {
-	const char *mocked_path = pathname;
+	const char *final_path = pathname;
 	for (size_t i = 0; i < rules.size; ++i) {
-		if (!strcmp(mocked_path, rules.table[i].source)) {
-			mocked_path = rules.table[i].dest;
+		if (!strcmp(final_path, rules.table[i].source)) {
+			final_path = rules.table[i].dest;
 			break;
 		}
 	}
-	return original_calls.openat(dirfd, mocked_path, flags, mode);
+	return original_calls.openat(dirfd, final_path, flags, mode);
 }
