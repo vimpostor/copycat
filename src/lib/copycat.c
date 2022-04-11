@@ -47,6 +47,15 @@ void read_config() {
 	fclose(f);
 }
 
+const char *find_match(const char *source) {
+	for (size_t i = 0; i < rules.size; ++i) {
+		if (!strcmp(source, rules.table[i].source)) {
+			return rules.table[i].dest;
+		}
+	}
+	return source;
+}
+
 void init() {
 	copycat_env = getenv(COPYCAT_ENV);
 	if (copycat_env != NULL) {
@@ -68,12 +77,6 @@ void fini() {
 }
 
 int openat(int dirfd, const char *pathname, int flags, mode_t mode) {
-	const char *final_path = pathname;
-	for (size_t i = 0; i < rules.size; ++i) {
-		if (!strcmp(final_path, rules.table[i].source)) {
-			final_path = rules.table[i].dest;
-			break;
-		}
-	}
+	const char *final_path = find_match(pathname);
 	return original_calls.openat(dirfd, final_path, flags, mode);
 }

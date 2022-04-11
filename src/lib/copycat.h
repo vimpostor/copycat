@@ -29,6 +29,7 @@ struct original_calls {
 void parse_rule(char *line);
 void parse_rules(char *rls);
 void read_config();
+const char *find_match(const char *source);
 void init() __attribute__((constructor));
 void fini() __attribute__((destructor));
 int openat(int dirfd, const char *pathname, int flags, mode_t mode);
