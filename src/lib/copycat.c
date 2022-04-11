@@ -25,7 +25,9 @@ void parse_rules(char *rls) {
 
 void init() {
 	copycat_env = getenv(COPYCAT_ENV);
-	parse_rules(copycat_env);
+	if (copycat_env != NULL) {
+		parse_rules(copycat_env);
+	}
 
 	original_calls.openat = (int (*)(int, const char *, int, mode_t)) dlsym(RTLD_NEXT, "openat");
 }
