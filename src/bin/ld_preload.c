@@ -14,9 +14,9 @@ int ld_exec(const char *file, char *const argv[]) {
 	env[env_size + 1] = NULL;
 
 	int status_code = execvpe(file, argv, env);
-	if (status_code == -1) {
-		perror(file);
-	}
+
+	// if we reach this, then execvp failed
+	perror(file);
 
 	// free environment again
 	for (size_t i = 0; i < env_size; ++i) {
