@@ -2,6 +2,7 @@
 
 #include "copycat.h"
 #include "ld_preload.h"
+#include "ptrace.h"
 
 void show_usage() {
 	printf("Usage: copycat /path/to/program\n");
@@ -45,8 +46,7 @@ int main(int argc, char *argv[])
 		char **const program_args = argv + optind;
 		if (use_ptrace) {
 			// ptrace
-			fprintf(stderr, "ptrace not implemented yet");
-			status_code = EXIT_FAILURE;
+			status_code = ptrace_exec(program, program_args);
 		} else {
 			// LD_PRELOAD
 			status_code = ld_exec(program, program_args);
