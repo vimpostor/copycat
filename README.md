@@ -9,7 +9,7 @@ COPYCAT="/tmp/a /tmp/b" copycat -- cat /tmp/a # this will print "b"
 # Success! cat was tricked into opening /tmp/b instead of /tmp/a
 ```
 
-Internally `copycat` uses a modern [Seccomp Notifier](https://brauner.github.io/2020/07/23/seccomp-notify.html) implementation to reliably intercept system calls.
+Internally `copycat` uses a modern [Seccomp Notifier](https://man7.org/linux/man-pages/man2/seccomp_unotify.2.html) implementation to reliably intercept system calls.
 This is cleaner and much faster than usual `ptrace`-based implementations. However due to this relatively new Linux Kernel feature, `copycat` only works on **Linux 5.9** or higher.
 
 # Building
