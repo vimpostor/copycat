@@ -1,22 +1,34 @@
 # Copycat
 
-This project is meant to provide an easily usable library for overwriting system calls.
-
-
-For example consider a program called "weird-program" that uses a hardcoded config path and opens it at runtime, let's say that config is `/etc/config`. Now suppose that you want it to use another config file and don't have much time on your hand and don't like beating around the bush, so you absolutely don't want to edit the source code of that program and recompile it.
-Instead with this library you can now do the following:
-
+This library allows you to overwrite system calls of arbitrary binaries in an intuitive way.
+For example the following snippet tricks `cat` into opening another file than was given:
 ```bash
-# Note that the syntax will probably change in the future
-COPYCAT="/etc/config $HOME/.new-local-config" copycat -- weird-program
+echo "a" > /tmp/a
+echo "b" > /tmp/b
+COPYCAT="/tmp/a /tmp/b" copycat -- cat /tmp/a # this will print "b"
+# Success! cat was tricked into opening /tmp/b instead of /tmp/a
 ```
 
-Tada, "weird-program" will now successfully use your new local config despite the hardcoded config and completely without recompiling. :partying_face:
+Internally `copycat` uses a modern [Seccomp Notifier](https://brauner.github.io/2020/07/23/seccomp-notify.html) implementation to reliably intercept system calls.
+This is cleaner and much faster than usual `ptrace`-based implementations. However due to this relatively new Linux Kernel feature, `copycat` only works on **Linux 5.9** or higher.
 
-## How does this work?
+# Building
 
-The way that this is implemented at the moment, is by intercepting the `openat()` system call using `LD_PRELOAD` and `dlsym()`. This has effectively no performance impact but the disadvantage is that it will not work with all binaries (e.g. not with statically linked binaries).
+Note: Arch users can install the [copycat-git](https://aur.archlinux.org/packages/copycat-git) AUR package.
 
-To make this work for all binaries, I intend to implement optional `ptrace` support in the future, which would also work for static binaries, but would be much slower (much like running the binary through a debugger).
+`copycat` is built with `cmake`:
+```bash
+cmake -B build
+cmake --build build
 
-If you'd like to test it out, you can install the [copycat-git](https://aur.archlinux.org/packages/copycat-git) package from the AUR.
+# Usage
+COPYCAT="source destination" build/copycat -- /path/to/program
+```
+
+# How does this work?
+
+Historically, system call interception was done using `ptrace()`. This has the disadvantage of being very slow, as `ptrace()` will trigger twice per system call.
+Using this method it is also incredibly cumbersome to overwrite system call arguments, and one quickly has to deal with architecture-specific quirks.
+
+Recent advancements in the [Seccomp Notifier](https://people.kernel.org/brauner/the-seccomp-notifier-cranking-up-the-crazy-with-bpf) API have made it possible to intercept any system call in a much more elegant way.
+This also offers significant speed improvements, now the performance impact is more like running the application in a container (with `seccomp`) instead of running in a debugger (with `ptrace`).
