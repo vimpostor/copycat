@@ -2,6 +2,7 @@
  * Please see the header file for additional license information about this particular file.
  */
 #include "seccomp_trap.h"
+#include "util.h"
 
 #include <fcntl.h>
 #include <linux/filter.h>
@@ -141,7 +142,7 @@ int handle_req(struct seccomp_notif *req,
 	 * that to avoid another TOCTOU, we should read all of the pointer args
 	 * before we decide to allow the syscall.
 	 */
-	dirfd = (int) req->data.args[0] & 0x0f;
+	dirfd = ls_int(req->data.args[0]);
 
 	if (lseek(mem, req->data.args[1], SEEK_SET) < 0) {
 		perror("seek");
@@ -153,9 +154,8 @@ int handle_req(struct seccomp_notif *req,
 		goto out;
 	}
 
-	flags = (int) req->data.args[2] & 0x0f;
-
-	mode = (mode_t) req->data.args[3] & 0x0f;
+	flags = ls_int(req->data.args[2]);
+	mode = (mode_t) ls_int(req->data.args[3]);
 
 	if (0) {
 		// TODO: Continue the syscall normally if nothing matches
