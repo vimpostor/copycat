@@ -151,13 +151,9 @@ int handle_req(struct seccomp_notif *req,
 	 */
 	dirfd = ls_int(req->data.args[0]);
 
-	if (lseek(mem, req->data.args[1], SEEK_SET) < 0) {
-		perror("seek");
-		goto out;
-	}
-	ret = read(mem, pathname, sizeof(pathname));
+	ret = pread(mem, pathname, sizeof(pathname), req->data.args[1]);
 	if (ret < 0) {
-		perror("read");
+		perror("pread");
 		goto out;
 	}
 
