@@ -1,6 +1,6 @@
 #include "seccomp_exec.h"
 
-#define __USE_POSIX
+#include <linux/limits.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <sys/prctl.h>
@@ -96,4 +96,97 @@ int seccomp_exec(const char *file, char *const argv[]) {
 	} else {
 		return seccomp_child(file, argv, &state);
 	}
+}
+
+int handle_req(struct seccomp_notif *req,
+		      struct seccomp_notif_resp *resp, int listener)
+{
+	char path[PATH_MAX];
+	int ret = -1, mem;
+
+	int dirfd;
+	char pathname[PATH_MAX];
+	int flags;
+	mode_t mode;
+
+	resp->id = req->id;
+	resp->error = -EPERM;
+	resp->val = 0;
+
+	if (req->data.nr != __NR_openat) {
+		fprintf(stderr, "huh? trapped something besides openat? %d\n", req->data.nr);
+		return -1;
+	}
+
+	/*
+	 * Ok, let's read the task's memory to see what they wanted to open
+	 */
+	snprintf(path, sizeof(path), "/proc/%d/mem", req->pid);
+	mem = open(path, O_RDONLY);
+	if (mem < 0) {
+		perror("open mem");
+		return -1;
+	}
+
+	/*
+	 * Now we avoid a TOCTOU: we referred to a pid by its pid, but since
+	 * the pid that made the syscall may have died, we need to confirm that
+	 * the pid is still valid after we open its /proc/pid/mem file. We can
+	 * ask the listener fd this as follows.
+	 *
+	 * Note that this check should occur *after* any task-specific
+	 * resources are opened, to make sure that the task has not died and
+	 * we're not wrongly reading someone else's state in order to make
+	 * decisions.
+	 */
+	if (ioctl(listener, SECCOMP_IOCTL_NOTIF_ID_VALID, &req->id) < 0) {
+		fprintf(stderr, "task died before we could map its memory\n");
+		goto out;
+	}
+
+	/*
+	 * Phew, we've got the right /proc/pid/mem. Now we can read it. Note
+	 * that to avoid another TOCTOU, we should read all of the pointer args
+	 * before we decide to allow the syscall.
+	 */
+	dirfd = ls_int(req->data.args[0]);
+
+	if (lseek(mem, req->data.args[1], SEEK_SET) < 0) {
+		perror("seek");
+		goto out;
+	}
+	ret = read(mem, pathname, sizeof(pathname));
+	if (ret < 0) {
+		perror("read");
+		goto out;
+	}
+
+	flags = ls_int(req->data.args[2]);
+	mode = (mode_t) ls_int(req->data.args[3]);
+
+	if (0) {
+		// TODO: Continue the syscall normally if nothing matches
+		resp->flags |= SECCOMP_USER_NOTIF_FLAG_CONTINUE;
+	}
+
+	// this will resolve to our overloaded openat
+	ret = openat(dirfd, pathname, flags, mode);
+	if (ret == -1) {
+		ret = 0;
+	} else {
+		// inject the file descriptor into the target process
+		struct seccomp_notif_addfd addfd = {};
+		addfd.id = req->id;
+		addfd.flags = 0;
+		addfd.srcfd = ret;
+		ret = ioctl(listener, SECCOMP_IOCTL_NOTIF_ADDFD, &addfd);
+		if (ret == -1) {
+			perror("SECCOMP_IOCTL_NOTIF_ADDFD");
+			goto out;
+		}
+		resp->error = 0;
+	}
+out:
+	close(mem);
+	return ret;
 }
