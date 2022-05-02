@@ -41,6 +41,7 @@ This also offers significant speed improvements, now the performance impact is m
 Rules can be supplied via the `$COPYCAT` environment variable. Alternatively create a file with the name `.copycat.conf` and add the rules, one rule per line.
 
 Rules contain a source and destination that are split by a space. If the source ends with a trailing slash, the rule is recursive, i.e. the source is interpreted as directory and all folders and files within this directory are redirected.
+If the destination also ends with a trailing slash, then a directory to directory mapping is created and the prefix is always replaced. If only the source ends with a trailing slash, then all files are mapped to the same location.
 Otherwise the rule matches source literally, i.e. the rule matches only the single file with the exact name like source.
 
 ## Examples
@@ -48,6 +49,8 @@ Otherwise the rule matches source literally, i.e. the rule matches only the sing
 ```bash
 # Redirect /tmp/a to /tmp/b
 /tmp/a /tmp/b
-# Redirect folder /tmp/f recursively to /etc/f
+# Redirect all files and folders in /tmp/f recursively to files and folders in /etc/f
+/tmp/f/ /etc/f/
+# Redirect all files and folders in /tmp/f to the single file /etc/f
 /tmp/f/ /etc/f
 ```

@@ -2,6 +2,7 @@
 #define _GNU_SOURCE
 
 #include <dlfcn.h>
+#include <linux/limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,11 +14,14 @@ char *copycat_env;
 
 #define COPYCAT_CONFIG ".copycat.conf"
 
+char path_buffer[PATH_MAX];
+
 #define MAX_RULES_SIZE 64
 struct rule_t {
 	const char *source;
 	const char *dest;
 	bool match_prefix;
+	bool replace_prefix_only;
 };
 struct rules_t {
 	size_t size;
@@ -28,7 +32,7 @@ struct original_calls {
 	int (*openat)(int dirfd, const char *pathname, int flags, mode_t mode);
 } original_calls;
 
-void add_rule(char *source, char *dest);
+void add_rule(char *source, char *destination);
 void parse_rule(char *line);
 void parse_rules(char *rls);
 void read_config();

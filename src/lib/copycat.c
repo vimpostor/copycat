@@ -4,12 +4,14 @@
 #include <sys/param.h>
 
 /*
- * Adds a rule to the rule table that maps source to dest
- * This function assumes that source and dest are not empty strings
+ * Adds a rule to the rule table that maps source to destination
+ * This function assumes that source and destination are not empty strings
  */
-void add_rule(char *source, char *dest) {
+void add_rule(char *source, char *destination) {
 	char *src = strdup(source);
+	char *dest = strdup(destination);
 	bool match_prefix = false;
+	bool replace_prefix_only = false;
 
 	if (src[strlen(src) - 1] == '/') {
 		// recursive mapping rule for directories
@@ -18,10 +20,18 @@ void add_rule(char *source, char *dest) {
 		match_prefix = true;
 	}
 
+	if (dest[strlen(dest) - 1] == '/') {
+		// trailing slash in destination
+		// replace prefix only
+		dest[strlen(dest) - 1] = '\0';
+		replace_prefix_only = true;
+	}
+
 	// actually add the rule
 	rules.table[rules.size].source = src;
-	rules.table[rules.size].dest = strdup(dest);
+	rules.table[rules.size].dest = dest;
 	rules.table[rules.size].match_prefix = match_prefix;
+	rules.table[rules.size].replace_prefix_only = replace_prefix_only;
 	rules.size++;
 }
 
@@ -72,15 +82,24 @@ void read_config() {
 
 const char *find_match(const char *source) {
 	for (size_t i = 0; i < rules.size; ++i) {
+		size_t rulesrc_len = strlen(rules.table[i].source);
 		// check if we have a recursive rule (match only prefix) or if we have to check for a literal match
-		size_t chars_to_compare = strlen(rules.table[i].source);
+		size_t chars_to_compare = rulesrc_len;
 		if (!rules.table[i].match_prefix) {
 			chars_to_compare = MAX(chars_to_compare, strlen(source));
 		}
 
 		// does the rule match?
 		if (!strncmp(source, rules.table[i].source, chars_to_compare)) {
-			return rules.table[i].dest;
+			char *result = (char *) rules.table[i].dest;
+			if (rules.table[i].replace_prefix_only) {
+				// extend result with rest of the input source
+				// this means we have just replaced the prefix
+				strcpy(path_buffer, result);
+				result = path_buffer;
+				strcat(result, source + rulesrc_len);
+			}
+			return result;
 		}
 	}
 	return source;
