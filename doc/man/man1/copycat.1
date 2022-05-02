@@ -1,0 +1,40 @@
+.TH "copycat" 1 "02 May 2022" "redacted@redacted.com" "copycat Documentation"
+
+.SH NAME
+copycat \- Intercept system calls
+
+.SH SYNOPSIS
+.B copycat
+[\-hn] \-\-
+.I command
+
+.SH DESCRIPTION
+
+.P
+This command intercepts system calls for a program given via the
+.I command
+argument. This is mostly used to redirect hardcoded files in a binary.
+
+.P
+Redirecting rules are defined via the
+.I COPYCAT
+environment variable. For example to redirect all system calls accessing /tmp/a.txt to /tmp/b.txt, you would use
+.I COPYCAT="/tmp/a.txt /tmp/b.txt"
+to redirect them without needing to do any change to the binary.
+
+.TP
+.B \-h
+Show usage information.
+
+.TP
+.B \-n
+Do not use seccomp, but an alternative
+.I LD_PRELOAD
+implementation to intercept system calls. This alternative implementation has minimal performance impact, but does not work with all binaries, thus this option is disabled by default.
+Example binaries that do not work with this method include statically linked binaries and binaries that call system calls directly instead of through the libc interface.
+
+.SH EXIT STATUS
+Returns zero on success.
+
+.SH NOTES
+The copycat project site, with more information and the source code repository, can be found at https://github.com/vimpostor/copycat. This tool is currently under development, please report any bugs at the project site or directly to the author.
