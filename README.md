@@ -35,3 +35,19 @@ Using this method it is also incredibly cumbersome to overwrite system call argu
 
 Recent advancements in the [Seccomp Notifier](https://people.kernel.org/brauner/the-seccomp-notifier-cranking-up-the-crazy-with-bpf) API have made it possible to intercept any system call in a much more elegant way.
 This also offers significant speed improvements, now the performance impact is more like running the application in a container (with `seccomp`) instead of running in a debugger (with `ptrace`).
+
+# Rules format
+
+Rules can be supplied via the `$COPYCAT` environment variable. Alternatively create a file with the name `.copycat.conf` and add the rules, one rule per line.
+
+Rules contain a source and destination that are split by a space. If the source ends with a trailing slash, the rule is recursive, i.e. the source is interpreted as directory and all folders and files within this directory are redirected.
+Otherwise the rule matches source literally, i.e. the rule matches only the single file with the exact name like source.
+
+## Examples
+
+```bash
+# Redirect /tmp/a to /tmp/b
+/tmp/a /tmp/b
+# Redirect folder /tmp/f recursively to /etc/f
+/tmp/f/ /etc/f
+```

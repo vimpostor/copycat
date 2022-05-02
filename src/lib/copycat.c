@@ -1,20 +1,43 @@
 #include "copycat.h"
 
+#include <string.h>
+#include <sys/param.h>
+
+/*
+ * Adds a rule to the rule table that maps source to dest
+ * This function assumes that source and dest are not empty strings
+ */
+void add_rule(char *source, char *dest) {
+	char *src = strdup(source);
+	bool match_prefix = false;
+
+	if (src[strlen(src) - 1] == '/') {
+		// recursive mapping rule for directories
+		// remove the trailing slash but set the match_prefix flag
+		src[strlen(src) - 1] = '\0';
+		match_prefix = true;
+	}
+
+	// actually add the rule
+	rules.table[rules.size].source = src;
+	rules.table[rules.size].dest = strdup(dest);
+	rules.table[rules.size].match_prefix = match_prefix;
+	rules.size++;
+}
+
 void parse_rule(char *line) {
 	// split line into source and destination
-	char *source = NULL;
 	char *dest = strchr(line, ' ');
 	if (dest != NULL) {
 		// add a terminating null byte for the source string instead of the whitespace
 		*dest = '\0';
-		source = line;
 		// skip ahead from the whitespace to the actual first character of destination
 		dest++;
 
-		// add rule
-		rules.table[rules.size].source = strdup(source);
-		rules.table[rules.size].dest = strdup(dest);
-		rules.size++;
+		// guard against empty strings
+		if (*dest && *line) {
+			add_rule(line, dest);
+		}
 	}
 }
 
@@ -49,7 +72,14 @@ void read_config() {
 
 const char *find_match(const char *source) {
 	for (size_t i = 0; i < rules.size; ++i) {
-		if (!strcmp(source, rules.table[i].source)) {
+		// check if we have a recursive rule (match only prefix) or if we have to check for a literal match
+		size_t chars_to_compare = strlen(rules.table[i].source);
+		if (!rules.table[i].match_prefix) {
+			chars_to_compare = MAX(chars_to_compare, strlen(source));
+		}
+
+		// does the rule match?
+		if (!strncmp(source, rules.table[i].source, chars_to_compare)) {
 			return rules.table[i].dest;
 		}
 	}

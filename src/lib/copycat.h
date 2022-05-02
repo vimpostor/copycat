@@ -17,6 +17,7 @@ char *copycat_env;
 struct rule_t {
 	const char *source;
 	const char *dest;
+	bool match_prefix;
 };
 struct rules_t {
 	size_t size;
@@ -27,6 +28,7 @@ struct original_calls {
 	int (*openat)(int dirfd, const char *pathname, int flags, mode_t mode);
 } original_calls;
 
+void add_rule(char *source, char *dest);
 void parse_rule(char *line);
 void parse_rules(char *rls);
 void read_config();
