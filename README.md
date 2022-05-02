@@ -23,6 +23,9 @@ cmake --build build
 
 # Usage
 COPYCAT="source destination" build/copycat -- /path/to/program
+
+# To install
+cmake --install build
 ```
 
 # How does this work?
