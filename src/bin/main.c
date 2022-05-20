@@ -13,14 +13,13 @@ int main(int argc, char *argv[])
 	// parse args
 	bool use_seccomp = true;
 	bool show_help = false;
-	int opt_index = 0;
 	int opt;
 	static struct option long_opts[] = {
 		{ "help", no_argument, NULL, 'h' },
 		{ "no-seccomp", no_argument, NULL, 'n' },
 		{ NULL, 0, NULL, 0 }
 	};
-	while ((opt = getopt_long(argc, argv, "hn", long_opts, &opt_index)) != -1) {
+	while ((opt = getopt_long(argc, argv, "hn", long_opts, NULL)) != -1) {
 		switch (opt) {
 		case 'h':
 			show_help = true;
