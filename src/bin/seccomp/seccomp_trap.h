@@ -22,3 +22,4 @@ int seccomp(unsigned int op, unsigned int flags, void *args);
 int send_fd(int sock, int fd);
 int recv_fd(int sock);
 int user_trap_syscall(int nr, unsigned int flags);
+int user_trap_syscalls(const int *nrs, size_t length, unsigned int flags);
