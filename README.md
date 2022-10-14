@@ -1,5 +1,7 @@
 # Copycat
 
+[![Continuous Integration](https://github.com/vimpostor/copycat/actions/workflows/ci.yml/badge.svg)](https://github.com/vimpostor/copycat/actions/workflows/ci.yml)
+
 This library allows you to overwrite system calls of arbitrary binaries in an intuitive way.
 For example the following snippet tricks `cat` into opening another file than was given:
 ```bash
