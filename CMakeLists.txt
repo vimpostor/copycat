@@ -1,5 +1,5 @@
-project(copycat)
 cmake_minimum_required(VERSION 3.21)
+project(copycat)
 
 set(LIB_TARGET "${PROJECT_NAME}")
 set(BIN_TARGET "${PROJECT_NAME}-bin")
