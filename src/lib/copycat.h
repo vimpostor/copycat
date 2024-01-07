@@ -6,7 +6,6 @@
 #include <dlfcn.h>
 #include <linux/limits.h>
 #include <linux/openat2.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

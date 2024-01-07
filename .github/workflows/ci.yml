@@ -5,7 +5,7 @@ jobs:
     strategy:
       matrix:
         cxx: [g++, clang++]
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     env:
       CXX: ${{ matrix.cxx }}
     steps:

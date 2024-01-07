@@ -3,7 +3,6 @@
 #include <linux/openat2.h>
 #include <linux/limits.h>
 #include <signal.h>
-#include <stdbool.h>
 #include <stdlib.h>
 #include <sys/prctl.h>
 #include <sys/socket.h>
