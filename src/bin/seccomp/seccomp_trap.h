@@ -1,3 +1,5 @@
+#pragma once
+
 /**
  * This file (seccomp_trap) is directly based on "samples/seccomp/user-trap.c" from the Linux kernel source tree.
  * The source code can be retreived at git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
@@ -17,6 +19,8 @@
 #include <unistd.h>
 
 #include "util.h"
+
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof(*(x)))
 
 int seccomp(unsigned int op, unsigned int flags, void *args);
 int send_fd(int sock, int fd);

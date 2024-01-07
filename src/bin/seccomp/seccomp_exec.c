@@ -1,16 +1,34 @@
 #include "seccomp_exec.h"
 
+#include <linux/openat2.h>
 #include <linux/limits.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <sys/prctl.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
+#include <sys/syscall.h>
+
+#include "syscalls/openat2.h"
+
+// list of all syscalls to trap
+static const int scalls[] = {
+	__NR_openat,
+	__NR_openat2,
+};
 
 int seccomp_child(const char *file, char *const argv[], struct seccomp_state *state) {
 	// agree to not gain any new privs, see man 2 seccomp section SECCOMP_SET_MODE_FILTER
 	prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
-	state->listener = user_trap_syscall(__NR_openat, SECCOMP_FILTER_FLAG_NEW_LISTENER);
+
+	state->listener = user_trap_syscalls(scalls, ARRAY_SIZE(scalls), SECCOMP_FILTER_FLAG_NEW_LISTENER);
+	// check if syscall trap setup was successful
+	if (state->listener < 0) {
+		perror("user_trap_syscalls");
+		return -1;
+	}
+
 	// send the listener to the parent; also serves as synchronization
 	if (send_fd(state->sk_pair[1], state->listener) < 0) {
 		return -1;
@@ -109,14 +127,28 @@ int handle_req(struct seccomp_notif *req,
 	int flags;
 	mode_t mode;
 
+	int nr = req->data.nr;
+
 	resp->id = req->id;
 	resp->error = -EPERM;
 	resp->val = 0;
 
-	if (req->data.nr != __NR_openat) {
-		fprintf(stderr, "huh? trapped something besides openat? %d\n", req->data.nr);
+#ifndef NDEBUG
+	bool found = false;
+	for (int i = 0; i < ARRAY_SIZE(scalls); ++i) {
+		if (req->data.nr == scalls[i]) {
+			found = true;
+		}
+	}
+	if (!found) {
+		fprintf(stderr, "huh? trapped system call %d that does not appear on our list?\n", req->data.nr);
+		if (0) {
+			// TODO: Continue the syscall normally if nothing matches
+			resp->flags |= SECCOMP_USER_NOTIF_FLAG_CONTINUE;
+		}
 		return -1;
 	}
+#endif
 
 	/*
 	 * Ok, let's read the task's memory to see what they wanted to open
@@ -160,13 +192,19 @@ int handle_req(struct seccomp_notif *req,
 	flags = ls_int(req->data.args[2]);
 	mode = (mode_t) ls_int(req->data.args[3]);
 
-	if (0) {
-		// TODO: Continue the syscall normally if nothing matches
-		resp->flags |= SECCOMP_USER_NOTIF_FLAG_CONTINUE;
+	// Make the final system call
+	// This will resolve to our overloaded syscall
+	if (nr == __NR_openat) {
+		ret = openat(dirfd, pathname, flags, mode);
+	} else if (nr == __NR_openat2) {
+		struct open_how how;
+		how.flags = 0;
+		how.mode = 0;
+		how.resolve = 0;
+		// TODO: Actually pass a how struct
+		ret = openat2(dirfd, pathname, &how, sizeof(struct open_how));
 	}
 
-	// this will resolve to our overloaded openat
-	ret = openat(dirfd, pathname, flags, mode);
 	if (ret == -1) {
 		ret = 0;
 	} else {

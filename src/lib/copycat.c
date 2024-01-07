@@ -3,6 +3,27 @@
 #include <string.h>
 #include <sys/param.h>
 
+#define COPYCAT_ENV "COPYCAT"
+char *copycat_env;
+
+#define COPYCAT_CONFIG ".copycat.conf"
+
+char path_buffer[PATH_MAX];
+
+struct original_calls original_calls = {};
+
+#define MAX_RULES_SIZE 64
+struct rule_t {
+	const char *source;
+	const char *dest;
+	bool match_prefix;
+	bool replace_prefix_only;
+};
+struct rules_t {
+	size_t size;
+	struct rule_t table[MAX_RULES_SIZE];
+} rules = {0};
+
 /*
  * Adds a rule to the rule table that maps source to destination
  * This function assumes that source and destination are not empty strings
@@ -105,6 +126,15 @@ const char *find_match(const char *source) {
 	return source;
 }
 
+
+long original_openat2(int dirfd, const char *pathname, struct open_how *how, size_t size) {
+	/**
+	 * glibc currently does not wrap openat2
+	 * Therefore we must manually implement it via syscall
+	 */
+	return syscall(SYS_openat2, dirfd, pathname, how, size);
+}
+
 void init() {
 	copycat_env = getenv(COPYCAT_ENV);
 	if (copycat_env != NULL) {
@@ -115,6 +145,7 @@ void init() {
 	}
 
 	original_calls.openat = (int (*)(int, const char *, int, mode_t)) dlsym(RTLD_NEXT, "openat");
+	original_calls.openat2 = &original_openat2;
 }
 
 void fini() {
@@ -123,9 +154,4 @@ void fini() {
 		free((char *) rules.table[i].source);
 		free((char *) rules.table[i].dest);
 	}
-}
-
-int openat(int dirfd, const char *pathname, int flags, mode_t mode) {
-	const char *final_path = find_match(pathname);
-	return original_calls.openat(dirfd, final_path, flags, mode);
 }

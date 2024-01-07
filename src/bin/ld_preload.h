@@ -1,3 +1,5 @@
+#pragma once
+
 // needed for execvpe
 #define _GNU_SOURCE
 #include <unistd.h>

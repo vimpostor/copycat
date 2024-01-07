@@ -1,3 +1,5 @@
+#pragma once
+
 /**
  * Returns the least significant 32 bit part of a 64 bit integer as int
  *

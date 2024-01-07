@@ -6,7 +6,7 @@
 #include <sys/param.h>
 #include <linux/seccomp.h>
 
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof(*(x)))
+// the maximum size of the BPF filter code
 #define MAX_FILTER_SIZE 8
 
 int seccomp(unsigned int op, unsigned int flags, void *args)
