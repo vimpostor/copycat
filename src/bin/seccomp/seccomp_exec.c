@@ -119,6 +119,10 @@ int seccomp_exec(const char *file, char *const argv[]) {
 	}
 }
 
+bool cookie_valid(int listener, struct seccomp_notif *req) {
+	return ioctl(listener, SECCOMP_IOCTL_NOTIF_ID_VALID, &req->id) == 0;
+}
+
 int handle_req(struct seccomp_notif *req,
 		      struct seccomp_notif_resp *resp, int listener)
 {
@@ -174,7 +178,7 @@ int handle_req(struct seccomp_notif *req,
 	 * we're not wrongly reading someone else's state in order to make
 	 * decisions.
 	 */
-	if (ioctl(listener, SECCOMP_IOCTL_NOTIF_ID_VALID, &req->id) < 0) {
+	if (!cookie_valid(listener, req)) {
 		fprintf(stderr, "task died before we could map its memory\n");
 		goto out;
 	}
@@ -189,6 +193,11 @@ int handle_req(struct seccomp_notif *req,
 	ret = pread(mem, pathname, sizeof(pathname), req->data.args[1]);
 	if (ret < 0) {
 		perror("pread");
+		goto out;
+	}
+
+	if (!cookie_valid(listener, req)) {
+		perror("post-read TOCTOU");
 		goto out;
 	}
 
