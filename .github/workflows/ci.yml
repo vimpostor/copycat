@@ -16,6 +16,5 @@ jobs:
       run: cmake -B build -DCMAKE_BUILD_TYPE=Debug
     - name: Build the project
       run: cmake --build build
-      # Reenable tests once we have figured out how to run with permissions in CI (probably need to remove the fork mechanism)
-    # - name: Run tests
-      # run: tests/run-tests.sh
+    - name: Run tests
+      run: tests/run-tests.sh

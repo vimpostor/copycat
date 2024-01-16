@@ -7,7 +7,7 @@
 #include <linux/seccomp.h>
 
 // the maximum size of the BPF filter code
-#define MAX_FILTER_SIZE 8
+#define MAX_FILTER_SIZE 16
 #define X32_SYSCALL_BIT 0x40000000
 
 int seccomp(unsigned int op, unsigned int flags, void *args)
@@ -95,27 +95,53 @@ int user_trap_syscall(int nr, unsigned int flags)
 }
 
 int user_trap_syscalls(const int *nrs, size_t length, unsigned int flags) {
-	// we need 1 load instruction, length many JMP instructions and 2 RET instructions
-	const int bpf_length = MIN(length + 3, MAX_FILTER_SIZE);
+	// we need 5 initial check instruction, length many JMP instructions and 2 final RET instructions
+	const int init_length = 5;
+	const int end_length = 2;
+	const int bpf_length = MIN(init_length + length + end_length, MAX_FILTER_SIZE);
 
-	// TODO: Like above, need to check that architecture matches
 	struct sock_filter filter[MAX_FILTER_SIZE];
 
-	// first load the number of the current syscall
+	// load arch
 	filter[0].code = (unsigned short) BPF_LD+BPF_W+BPF_ABS;
 	filter[0].jt = 0;
 	filter[0].jf = 0;
-	filter[0].k = offsetof(struct seccomp_data, nr);
+	filter[0].k = offsetof(struct seccomp_data, arch);
 
-	// now with the syscall nr loaded, dynamically add checks for all syscall nrs we want to intercept
+	// check arch
+	filter[1].code = (unsigned short) BPF_JMP+BPF_JEQ+BPF_K;
+	filter[1].jt = 0;
+	filter[1].jf = 2;
+	filter[1].k = AUDIT_ARCH_X86_64;
+
+	// load the number of the current syscall
+	filter[2].code = (unsigned short) BPF_LD+BPF_W+BPF_ABS;
+	filter[2].jt = 0;
+	filter[2].jf = 0;
+	filter[2].k = offsetof(struct seccomp_data, nr);
+
+	// for the x32 ABI, all system call numbers have bit 30 set
+	filter[3].code = (unsigned short) BPF_JMP+BPF_JGE+BPF_K;
+	filter[3].jt = 0;
+	filter[3].jf = 1;
+	filter[3].k = X32_SYSCALL_BIT;
+
+	// terminate the process if one of the earlier checks jumped here
+	filter[4].code = (unsigned short) BPF_RET+BPF_K;
+	filter[4].jt = 0;
+	filter[4].jf = 0;
+	filter[4].k = SECCOMP_RET_KILL_PROCESS;
+
+	// now with the syscall nr still loaded, dynamically add checks for all syscall nrs we want to intercept
 	// Warning: If there are more nrs than MAX_FILTER_SIZE - 3, we may omit some system calls
 	// But this is still more sane than writing out of bounds
-	for (int i = 0; i < bpf_length - 3; ++i) {
-		const int filter_index = i + 1;
+	for (int i = 0; i < bpf_length - end_length - init_length; ++i) {
+		const int filter_index = i + init_length;
 		// jump if equal
 		filter[filter_index].code = (unsigned short) BPF_JMP+BPF_JEQ+BPF_K;
 		// if equal (found a matching syscall), jump to early SECCOMP_RET_USER_NOTIF return
-		filter[filter_index].jt = bpf_length - 3 - i;
+		// the jump distance is the difference between the curent index and the last index (which has index len - 1), but again minus one, because BPF does one implicit jump forward on each instruction
+		filter[filter_index].jt = (bpf_length - 1) - filter_index - 1;
 		// if not equal (no matching syscall yet), try the next syscall nr in the next line (so don't jump at all)
 		filter[filter_index].jf = 0;
 		// match against the syscall nr
