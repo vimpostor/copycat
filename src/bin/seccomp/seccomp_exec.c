@@ -89,12 +89,6 @@ int seccomp_parent(struct seccomp_state *state) {
 		if (handle_req(req, resp, state->listener) < 0) {
 			break;
 		}
-
-		// task got a signal and restarted the syscall
-		if (ioctl(state->listener, SECCOMP_IOCTL_NOTIF_SEND, resp) < 0 && errno != ENOENT) {
-			perror("ioctl send");
-			break;
-		}
 	}
 
 	// cleanup
@@ -219,12 +213,18 @@ int handle_req(struct seccomp_notif *req,
 
 	if (ret == -1) {
 		ret = 0;
+		// task got a signal and restarted the syscall
+		if (ioctl(listener, SECCOMP_IOCTL_NOTIF_SEND, resp) < 0 && errno != ENOENT) {
+			perror("ioctl send");
+			goto out;
+		}
 	} else {
 		// inject the file descriptor into the target process
 		struct seccomp_notif_addfd addfd = {};
 		addfd.id = req->id;
-		addfd.flags = 0;
+		addfd.flags = SECCOMP_ADDFD_FLAG_SEND; // add the fd and return it, atomically
 		addfd.srcfd = ret;
+		// note that this branch does not need the SECCOMP_IOCTL_NOTIF_SEND, because this ADDFD call already includes it due to the SECCOMP_ADDFD_FLAG_SEND flag
 		ret = ioctl(listener, SECCOMP_IOCTL_NOTIF_ADDFD, &addfd);
 		if (ret == -1) {
 			perror("SECCOMP_IOCTL_NOTIF_ADDFD");
