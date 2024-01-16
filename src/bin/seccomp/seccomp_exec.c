@@ -17,6 +17,14 @@ static const int scalls[] = {
 	__NR_openat2,
 };
 
+void handle_child_exit(int) {
+	// For now ok like this...
+	// Ideally we want to perform the cleanup in a more elegant way, than just straight up exiting.
+	// But there are bugs, that cause ioctl(SECCOMP_IOCTL_NOTIF_ADDFD) to block forever when the child exits,
+	// so it is easier for now to do it this way.
+	exit(0);
+}
+
 int seccomp_child(const char *file, char *const argv[], struct seccomp_state *state) {
 	// agree to not gain any new privs, see man 2 seccomp section SECCOMP_SET_MODE_FILTER
 	prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
@@ -49,55 +57,51 @@ int seccomp_parent(struct seccomp_state *state) {
 		return -1;
 	}
 
-	// fork is not strictly necessary, but this way we can just wait for the tracee to exit and kill the tracer
-	pid_t tracer = fork();
-	if (tracer) {
-		// parent
-		int status, result = 0;
-		close(state->listener);
-		waitpid(state->task_pid, &status, 0);
-		if (!WIFEXITED(status) || WEXITSTATUS(status)) {
-			result = 1;
-		}
-		kill(tracer, SIGKILL);
-		return result;
-	} else {
-		// child
-		struct seccomp_notif *req;
-		struct seccomp_notif_resp *resp;
-		struct seccomp_notif_sizes sizes;
-
-		if (seccomp(SECCOMP_GET_NOTIF_SIZES, 0, &sizes) < 0) {
-			perror("seccomp(GET_NOTIF_SIZES)");
-			return -1;
-		}
-		req = malloc(sizes.seccomp_notif);
-		resp = malloc(sizes.seccomp_notif_resp);
-		memset(resp, 0, sizes.seccomp_notif_resp);
-
-		while (1) {
-			memset(req, 0, sizes.seccomp_notif);
-			if (ioctl(state->listener, SECCOMP_IOCTL_NOTIF_RECV, req)) {
-				perror("ioctl recv");
-				break;
-			}
-			if (handle_req(req, resp, state->listener) < 0) {
-				break;
-			}
-
-			// task got a signal and restarted the syscall
-			if (ioctl(state->listener, SECCOMP_IOCTL_NOTIF_SEND, resp) < 0 && errno != ENOENT) {
-				perror("ioctl send");
-				break;
-			}
-		}
-
-		// cleanup
-		free(resp);
-		free(req);
-		close(state->listener);
-		exit(EXIT_FAILURE);
+	// install a signal handler so that we can quit the supervisor, once the target has terminated
+	struct sigaction sa;
+	sa.sa_handler = handle_child_exit;
+	sa.sa_flags = 0;
+	sigemptyset(&sa.sa_mask);
+	if (sigaction(SIGCHLD, &sa, NULL) == -1) {
+		perror("sigaction(SIGCHLD)");
+		return -1;
 	}
+
+	// setup supervisor
+	struct seccomp_notif *req;
+	struct seccomp_notif_resp *resp;
+	struct seccomp_notif_sizes sizes;
+
+	if (seccomp(SECCOMP_GET_NOTIF_SIZES, 0, &sizes) < 0) {
+		perror("seccomp(GET_NOTIF_SIZES)");
+		return -1;
+	}
+	req = malloc(sizes.seccomp_notif);
+	resp = malloc(sizes.seccomp_notif_resp);
+	memset(resp, 0, sizes.seccomp_notif_resp);
+
+	while (1) {
+		memset(req, 0, sizes.seccomp_notif);
+		if (ioctl(state->listener, SECCOMP_IOCTL_NOTIF_RECV, req)) {
+			perror("ioctl recv");
+			break;
+		}
+		if (handle_req(req, resp, state->listener) < 0) {
+			break;
+		}
+
+		// task got a signal and restarted the syscall
+		if (ioctl(state->listener, SECCOMP_IOCTL_NOTIF_SEND, resp) < 0 && errno != ENOENT) {
+			perror("ioctl send");
+			break;
+		}
+	}
+
+	// cleanup
+	free(resp);
+	free(req);
+	close(state->listener);
+	exit(EXIT_FAILURE);
 }
 
 int seccomp_exec(const char *file, char *const argv[]) {
