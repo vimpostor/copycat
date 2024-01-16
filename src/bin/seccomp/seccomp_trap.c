@@ -8,6 +8,7 @@
 
 // the maximum size of the BPF filter code
 #define MAX_FILTER_SIZE 8
+#define X32_SYSCALL_BIT 0x40000000
 
 int seccomp(unsigned int op, unsigned int flags, void *args)
 {
@@ -71,13 +72,15 @@ int recv_fd(int sock)
 
 int user_trap_syscall(int nr, unsigned int flags)
 {
-	/**
-	 * TODO: Check that architecture matches
-	 * https://www.kernel.org/doc/html/v5.0/userspace-api/seccomp_filter.html#pitfalls
-	 */
 	struct sock_filter filter[] = {
-		BPF_STMT(BPF_LD+BPF_W+BPF_ABS,
-			offsetof(struct seccomp_data, nr)),
+		// Check that architecture matches
+		// https://www.kernel.org/doc/html/v5.0/userspace-api/seccomp_filter.html#pitfalls
+		BPF_STMT(BPF_LD+BPF_W+BPF_ABS, (offsetof(struct seccomp_data, arch))),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, AUDIT_ARCH_X86_64, 0, 2),
+		BPF_STMT(BPF_LD+BPF_W+BPF_ABS, (offsetof(struct seccomp_data, nr))),
+		BPF_JUMP(BPF_JMP+BPF_JGE+BPF_K, X32_SYSCALL_BIT, 0, 1),
+		BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_KILL_PROCESS),
+		// decide wheter to allow the syscall
 		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, nr, 0, 1),
 		BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_USER_NOTIF),
 		BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_ALLOW),
