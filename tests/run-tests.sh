@@ -8,7 +8,7 @@ echo "c" > /tmp/c
 gcc tests/tests_general.c -o tests_general
 COPYCAT="/tmp/a /tmp/b" build/copycat -- ./tests_general
 
-gcc -lm tests/benchmark.c -o benchmark
+gcc tests/benchmark.c -lm -o benchmark
 echo -e "\nRunning benchmark without interception:"
 ./benchmark
 echo -e "\nRunning benchmark with interception:"

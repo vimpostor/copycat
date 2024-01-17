@@ -133,6 +133,7 @@ int handle_req(struct seccomp_notif *req,
 	resp->id = req->id;
 	resp->error = -EPERM;
 	resp->val = 0;
+	resp->flags = 0;
 
 #ifndef NDEBUG
 	bool found = false;
@@ -143,9 +144,12 @@ int handle_req(struct seccomp_notif *req,
 	}
 	if (!found) {
 		fprintf(stderr, "huh? trapped system call %d that does not appear on our list?\n", req->data.nr);
-		if (0) {
-			// TODO: Continue the syscall normally if nothing matches
-			resp->flags |= SECCOMP_USER_NOTIF_FLAG_CONTINUE;
+		// allow target to continue the syscall normally
+		resp->flags |= SECCOMP_USER_NOTIF_FLAG_CONTINUE;
+		resp->error = 0;
+		resp->val = 0;
+		if (ioctl(listener, SECCOMP_IOCTL_NOTIF_SEND, resp) < 0 && errno != ENOENT) {
+			perror("ioctl send");
 		}
 		return -1;
 	}
