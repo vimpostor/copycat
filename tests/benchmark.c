@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 	const char hot_filename[] = "/tmp/a";
 	const char cold_filename[] = "/tmp/c";
 	int f = -1;
-	size_t n = 1000;
+	size_t n = 100000;
 	struct timespec start, end;
 
 	// hot path, every call is intercepted and changed

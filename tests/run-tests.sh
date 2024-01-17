@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 echo "a" > /tmp/a
 echo "b" > /tmp/b
 echo "c" > /tmp/c

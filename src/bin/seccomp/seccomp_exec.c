@@ -231,6 +231,8 @@ int handle_req(struct seccomp_notif *req,
 			goto out;
 		}
 		resp->error = 0;
+		// we need to close the fd on our side, it will still be open on the target side, since we already sent it above
+		close(addfd.srcfd);
 	}
 out:
 	close(mem);
