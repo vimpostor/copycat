@@ -32,7 +32,7 @@ int do_openat(const char *filename) {
 
 // we need to do a benchmark without system calls involved, to check for general performance overhead
 int is_prime(int n) {
-	for (int i = 2; i < sqrt(n); ++i) {
+	for (int i = 2; i <= sqrt(n); ++i) {
 		if ((n % i) == 0) {
 			return 0;
 		}
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
 	// passive path, no call is intercepted (no system calls)
 	int primes = 0;
 	clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-	for (int i = 0; i < n; ++i) {
+	for (int i = 2; i < n; ++i) {
 		primes += is_prime(i);
 	}
 	clock_gettime(CLOCK_MONOTONIC_RAW, &end);
