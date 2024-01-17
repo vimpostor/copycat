@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
 		check_correct_fd(f);
 	}
 	clock_gettime(CLOCK_MONOTONIC_RAW, &end);
-	printf("openat (intercepted and modified): %lu us\n", (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000);
+	printf("openat (intercepted and modified): %lu.%lu s\n", end.tv_sec - start.tv_sec, end.tv_nsec - start.tv_nsec);
 
 	// cold path, every call is intercepted but no arguments are changed (the BPF filter does not trigger)
 	clock_gettime(CLOCK_MONOTONIC_RAW, &start);
@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
 		check_correct_fd(f);
 	}
 	clock_gettime(CLOCK_MONOTONIC_RAW, &end);
-	printf("openat (intercepted and not modified): %lu us\n", (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000);
+	printf("openat (intercepted and not modified): %lu.%lu s\n", end.tv_sec - start.tv_sec, end.tv_nsec - start.tv_nsec);
 
 	// passive path, no call is intercepted (no system calls)
 	int primes = 0;
@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
 		primes += is_prime(i);
 	}
 	clock_gettime(CLOCK_MONOTONIC_RAW, &end);
-	printf("path with no system calls: Found %d primes in %lu us\n", primes, (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000);
+	printf("path with no system calls: Found %d primes in %lu.%lu s\n", primes, end.tv_sec - start.tv_sec, end.tv_nsec - start.tv_nsec);
 
 	return EXIT_SUCCESS;
 }
