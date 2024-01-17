@@ -1,6 +1,7 @@
 build/
 .cache/
 tests_general
+benchmark
 .copycat.conf
 
 # Created by https://www.toptal.com/developers/gitignore/api/c,cmake
