@@ -1,0 +1,45 @@
+{
+  "nodes": {
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1731139594,
+        "narHash": "sha256-IigrKK3vYRpUu+HEjPL/phrfh7Ox881er1UEsZvw9Q4=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "76612b17c0ce71689921ca12d9ffdc9c23ce40b2",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "quartz": {
+      "inputs": {
+        "nixpkgs": "nixpkgs"
+      },
+      "locked": {
+        "lastModified": 1731874527,
+        "narHash": "sha256-nW8217HOB/bDVrAsuEfntkf5EkC5EJO6qL2818jB12s=",
+        "owner": "vimpostor",
+        "repo": "quartz",
+        "rev": "921e7c763416b38ae754a6f0afc223b328cdecac",
+        "type": "github"
+      },
+      "original": {
+        "owner": "vimpostor",
+        "repo": "quartz",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "quartz": "quartz"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
