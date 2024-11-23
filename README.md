@@ -63,8 +63,8 @@ Not all `open()`-style syscalls have been implemented yet.
 
 The following syscalls are intercepted:
 
-[x] [openat](https://man7.org/linux/man-pages/man2/openat.2.html)
-[x] [openat2](https://man7.org/linux/man-pages/man2/openat2.2.html)
-[ ] [open](https://man7.org/linux/man-pages/man2/open.2.html)
+- [x] [openat](https://man7.org/linux/man-pages/man2/openat.2.html)
+- [x] [openat2](https://man7.org/linux/man-pages/man2/openat2.2.html)
+- [ ] [open](https://man7.org/linux/man-pages/man2/open.2.html)
 
 Note that if programs use the glibc wrapper for `open` system calls, they often go through an actual `openat()` system call, so it might sometimes seem like more system calls are intercepted than are actually implemented.
