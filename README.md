@@ -12,7 +12,7 @@ COPYCAT="/tmp/a /tmp/b" copycat -- cat /tmp/a # this will print "b"
 ```
 
 Internally `copycat` uses a modern [Seccomp Notifier](https://man7.org/linux/man-pages/man2/seccomp_unotify.2.html) implementation to reliably intercept system calls.
-This is cleaner and much faster than usual `ptrace`-based implementations. However due to this relatively new Linux Kernel feature, `copycat` only works on **Linux 5.9** or higher.
+This is more elegant and much faster than usual `ptrace`-based implementations. However due to this relatively new Linux Kernel feature, `copycat` only works on **Linux 5.9** or higher.
 
 # Building
 
@@ -36,7 +36,7 @@ Historically, system call interception was done using `ptrace()`. This has the d
 Using this method it is also incredibly cumbersome to overwrite system call arguments, and one quickly has to deal with architecture-specific quirks.
 
 Recent advancements in the [Seccomp Notifier](https://people.kernel.org/brauner/the-seccomp-notifier-cranking-up-the-crazy-with-bpf) API have made it possible to intercept any system call in a much more elegant way.
-This also offers significant speed improvements, now the performance impact is more like running the application in a container (with `seccomp`) instead of running in a debugger (with `ptrace`).
+This also offers significant speed improvements, now the performance impact is closer to running the application in a container.
 
 # Rules format
 
@@ -56,3 +56,15 @@ Otherwise the rule matches source literally, i.e. the rule matches only the sing
 # Redirect all files and folders in /tmp/f to the single file /etc/f
 /tmp/f/ /etc/f
 ```
+
+# Caveats
+
+Not all `open()`-style syscalls have been implemented yet.
+
+The following syscalls are intercepted:
+
+[x] [openat](https://man7.org/linux/man-pages/man2/openat.2.html)
+[x] [openat2](https://man7.org/linux/man-pages/man2/openat2.2.html)
+[ ] [open](https://man7.org/linux/man-pages/man2/open.2.html)
+
+Note that if programs use the glibc wrapper for `open` system calls, they often go through an actual `openat()` system call, so it might sometimes seem like more system calls are intercepted than are actually implemented.
