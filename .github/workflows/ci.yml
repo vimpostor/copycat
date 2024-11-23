@@ -11,7 +11,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Install dependencies
-      run: sudo apt install -y libseccomp-dev && sudo add-apt-repository ppa:ubuntu-toolchain-r/test && sudo apt-get update && sudo apt-get -y install gcc-13 && sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 30
+      run: sudo apt install -y libseccomp-dev && sudo add-apt-repository ppa:ubuntu-toolchain-r/test && sudo apt-get update && sudo apt-get -y install gcc-14 && sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 30
     - name: Configure the project
       run: cmake -B build -DCMAKE_BUILD_TYPE=Debug
     - name: Build the project
