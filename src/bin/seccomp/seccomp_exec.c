@@ -13,6 +13,7 @@
 
 // list of all syscalls to trap
 static const int scalls[] = {
+	__NR_open,
 	__NR_openat,
 	__NR_openat2,
 };
@@ -186,9 +187,14 @@ int handle_req(struct seccomp_notif *req,
 	 * that to avoid another TOCTOU, we should read all of the pointer args
 	 * before we decide to allow the syscall.
 	 */
-	dirfd = ls_int(req->data.args[0]);
 
-	ret = pread(mem, pathname, sizeof(pathname), req->data.args[1]);
+	if (nr != __NR_open) {
+		dirfd = ls_int(req->data.args[0]);
+	}
+
+	// the arguments are shifted one to the right for all syscalls but open
+	const int argoffset = nr != __NR_open;
+	ret = pread(mem, pathname, sizeof(pathname), req->data.args[argoffset]);
 	if (ret < 0) {
 		perror("pread");
 		goto out;
@@ -199,12 +205,14 @@ int handle_req(struct seccomp_notif *req,
 		goto out;
 	}
 
-	flags = ls_int(req->data.args[2]);
-	mode = (mode_t) ls_int(req->data.args[3]);
+	flags = ls_int(req->data.args[argoffset + 1]);
+	mode = (mode_t) ls_int(req->data.args[argoffset + 2]);
 
 	// Make the final system call
 	// This will resolve to our overloaded syscall
-	if (nr == __NR_openat) {
+	if (nr == __NR_open) {
+		ret = open(pathname, flags, mode);
+	} else if (nr == __NR_openat) {
 		ret = openat(dirfd, pathname, flags, mode);
 	} else if (nr == __NR_openat2) {
 		struct open_how how;

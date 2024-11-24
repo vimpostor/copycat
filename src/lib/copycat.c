@@ -144,6 +144,7 @@ void init() {
 		read_config();
 	}
 
+	original_calls.open = (int (*)(const char *, int, mode_t)) dlsym(RTLD_NEXT, "open");
 	original_calls.openat = (int (*)(int, const char *, int, mode_t)) dlsym(RTLD_NEXT, "openat");
 	original_calls.openat2 = &original_openat2;
 }

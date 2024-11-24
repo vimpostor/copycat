@@ -13,6 +13,7 @@
 #include <sys/types.h>
 
 extern struct original_calls {
+	int (*open)(const char *pathname, int flags, mode_t mode);
 	int (*openat)(int dirfd, const char *pathname, int flags, mode_t mode);
 	long (*openat2)(int dirfd, const char *pathname, struct open_how *how, size_t size);
 } original_calls;
