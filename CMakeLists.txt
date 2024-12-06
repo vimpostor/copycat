@@ -23,3 +23,9 @@ include(GNUInstallDirs)
 install(TARGETS ${LIB_TARGET})
 install(TARGETS ${BIN_TARGET})
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/doc/man/" TYPE MAN)
+
+# testing
+if (BUILD_TESTING)
+	enable_testing()
+	add_subdirectory(tests)
+endif()
