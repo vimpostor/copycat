@@ -18,14 +18,6 @@ static const int scalls[] = {
 	__NR_openat2,
 };
 
-void handle_child_exit(int) {
-	// For now ok like this...
-	// Ideally we want to perform the cleanup in a more elegant way, than just straight up exiting.
-	// But there are bugs, that cause ioctl(SECCOMP_IOCTL_NOTIF_ADDFD) to block forever when the child exits,
-	// so it is easier for now to do it this way.
-	exit(0);
-}
-
 int seccomp_child(const char *file, char *const argv[], struct seccomp_state *state) {
 	// agree to not gain any new privs, see man 2 seccomp section SECCOMP_SET_MODE_FILTER
 	prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
@@ -52,19 +44,11 @@ int seccomp_child(const char *file, char *const argv[], struct seccomp_state *st
 }
 
 int seccomp_parent(struct seccomp_state *state) {
+	int exit_code = EXIT_FAILURE;
+
 	// get the listener from the child
 	state->listener = recv_fd(state->sk_pair[0]);
 	if (state->listener < 0) {
-		return -1;
-	}
-
-	// install a signal handler so that we can quit the supervisor, once the target has terminated
-	struct sigaction sa;
-	sa.sa_handler = handle_child_exit;
-	sa.sa_flags = 0;
-	sigemptyset(&sa.sa_mask);
-	if (sigaction(SIGCHLD, &sa, NULL) == -1) {
-		perror("sigaction(SIGCHLD)");
 		return -1;
 	}
 
@@ -84,7 +68,13 @@ int seccomp_parent(struct seccomp_state *state) {
 	while (1) {
 		memset(req, 0, sizes.seccomp_notif);
 		if (ioctl(state->listener, SECCOMP_IOCTL_NOTIF_RECV, req)) {
-			perror("ioctl recv");
+			if (errno == ENOENT) {
+				// when the child exits, SECCOMP_IOCTL_NOTIF_RECV will return with ENOENT,
+				// in which case we can also just quit the supervisor
+				exit_code = EXIT_SUCCESS;
+			} else {
+				perror("ioctl recv");
+			}
 			break;
 		}
 		if (handle_req(req, resp, state->listener) < 0) {
@@ -96,7 +86,7 @@ int seccomp_parent(struct seccomp_state *state) {
 	free(resp);
 	free(req);
 	close(state->listener);
-	exit(EXIT_FAILURE);
+	exit(exit_code);
 }
 
 int seccomp_exec(const char *file, char *const argv[]) {
