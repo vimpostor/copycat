@@ -6,8 +6,9 @@
 #include <stdlib.h>
 #include <sys/prctl.h>
 #include <sys/socket.h>
-#include <sys/wait.h>
 #include <sys/syscall.h>
+#include <sys/utsname.h>
+#include <sys/wait.h>
 
 #include "syscalls/openat2.h"
 
@@ -17,6 +18,15 @@ static const int scalls[] = {
 	__NR_openat,
 	__NR_openat2,
 };
+
+void handle_child_exit(int) {
+	// This hacky workaround is only needed for old Linux kernel versions. With latest Linux,
+	// SECCOMP_IOCTL_NOTIF_RECV will return to the caller properly once the supervised child exits.
+	// But with older kernel versions there is a bug, where the call will hang indefinitely,
+	// so we have to watch for the child exiting and just terminate from here as a workaround.
+	// Otherwise the program would never terminate.
+	exit(0);
+}
 
 int seccomp_child(const char *file, char *const argv[], struct seccomp_state *state) {
 	// agree to not gain any new privs, see man 2 seccomp section SECCOMP_SET_MODE_FILTER
@@ -52,6 +62,26 @@ int seccomp_parent(struct seccomp_state *state) {
 		return -1;
 	}
 
+	// check for old Linux kernel version
+	struct utsname uts;
+	if (!uname(&uts)) {
+		// to work around a Linux kernel bug, we may need to install a signal handler so that we can quit the supervisor,
+		// once the target has terminated. This is not needed with Linux >= 6.11 anymore, as the bug has been fixed:
+		// https://lore.kernel.org/all/20240628021014.231976-2-avagin@google.com/
+		const char *version = uts.release;
+		if (strverscmp(version, "6.11") < 0) {
+			fprintf(stderr, "WARNING: You are using an old Linux kernel version %s, installing a fallback workaround to terminate on SIGCHLD...\n", version);
+			struct sigaction sa;
+			sa.sa_handler = handle_child_exit;
+			sa.sa_flags = 0;
+			sigemptyset(&sa.sa_mask);
+			if (sigaction(SIGCHLD, &sa, NULL) == -1) {
+				perror("sigaction(SIGCHLD)");
+				return -1;
+			}
+		}
+	}
+
 	// setup supervisor
 	struct seccomp_notif *req;
 	struct seccomp_notif_resp *resp;
@@ -65,7 +95,7 @@ int seccomp_parent(struct seccomp_state *state) {
 	resp = malloc(sizes.seccomp_notif_resp);
 	memset(resp, 0, sizes.seccomp_notif_resp);
 
-	while (1) {
+	while (true) {
 		memset(req, 0, sizes.seccomp_notif);
 		if (ioctl(state->listener, SECCOMP_IOCTL_NOTIF_RECV, req)) {
 			if (errno == ENOENT) {

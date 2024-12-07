@@ -12,7 +12,7 @@ COPYCAT="/tmp/a /tmp/b" copycat -- cat /tmp/a # this will print "b"
 ```
 
 Internally `copycat` uses a modern [Seccomp Notifier](https://man7.org/linux/man-pages/man2/seccomp_unotify.2.html) implementation to reliably intercept system calls.
-This is more elegant and much faster than usual `ptrace`-based implementations. However due to this relatively new Linux Kernel feature, `copycat` only works on **Linux 5.9** or higher. Additionally, due to a [Linux kernel bug not notifying the supervisor when a traced child terminates](https://lore.kernel.org/all/20240628021014.231976-2-avagin@google.com/), this program will not terminate unless you use **Linux 6.11** or higher.
+This is more elegant and much faster than usual `ptrace`-based implementations. However due to this relatively new Linux Kernel feature, `copycat` only works on **Linux 5.9** or higher. Additionally, due to a [Linux kernel bug not notifying the supervisor when a traced child terminates](https://lore.kernel.org/all/20240628021014.231976-2-avagin@google.com/), it is recommended to use **Linux 6.11** or higher.
 
 # Building
 

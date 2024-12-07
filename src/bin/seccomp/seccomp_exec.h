@@ -14,6 +14,7 @@ struct seccomp_state {
 	pid_t task_pid;
 };
 
+void handle_child_exit(int);
 int seccomp_child(const char *file, char *const argv[], struct seccomp_state *state);
 int seccomp_parent(struct seccomp_state *state);
 int seccomp_exec(const char *file, char *const argv[]);
