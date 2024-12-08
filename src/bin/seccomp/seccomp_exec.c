@@ -104,10 +104,8 @@ int seccomp_parent(struct seccomp_state *state) {
 				// But first we have to retrieve the child's exit code
 				int wstatus;
 				pid_t wait = waitpid(state->task_pid, &wstatus, WUNTRACED | WCONTINUED);
-				if (wait != state->task_pid || !WIFEXITED(wstatus)) {
-					exit_code = EXIT_FAILURE;
-				} else {
-					// Pass over the same exit code
+				if (wait == state->task_pid && WIFEXITED(wstatus)) {
+					// Hand over the same exit code
 					exit_code = WEXITSTATUS(wstatus);
 				}
 			} else {
