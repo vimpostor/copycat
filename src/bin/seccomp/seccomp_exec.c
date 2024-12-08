@@ -148,6 +148,7 @@ int handle_req(struct seccomp_notif *req,
 	char pathname[PATH_MAX];
 	int flags;
 	mode_t mode;
+	struct open_how how;
 
 	int nr = req->data.nr;
 
@@ -219,6 +220,14 @@ int handle_req(struct seccomp_notif *req,
 		perror("pread");
 		goto out;
 	}
+	if (nr == __NR_openat2) {
+		// read the special how struct
+		ret = pread(mem, &how, sizeof(how), req->data.args[2]);
+		if (ret < 0) {
+			perror("pread");
+			goto out;
+		}
+	}
 
 	if (!cookie_valid(listener, req)) {
 		perror("post-read TOCTOU");
@@ -235,11 +244,6 @@ int handle_req(struct seccomp_notif *req,
 	} else if (nr == __NR_openat) {
 		ret = openat(dirfd, pathname, flags, mode);
 	} else if (nr == __NR_openat2) {
-		struct open_how how;
-		how.flags = 0;
-		how.mode = 0;
-		how.resolve = 0;
-		// TODO: Actually pass a how struct
 		ret = openat2(dirfd, pathname, &how, sizeof(struct open_how));
 	}
 
