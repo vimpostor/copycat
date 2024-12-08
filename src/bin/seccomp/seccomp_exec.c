@@ -99,9 +99,17 @@ int seccomp_parent(struct seccomp_state *state) {
 		memset(req, 0, sizes.seccomp_notif);
 		if (ioctl(state->listener, SECCOMP_IOCTL_NOTIF_RECV, req)) {
 			if (errno == ENOENT) {
-				// when the child exits, SECCOMP_IOCTL_NOTIF_RECV will return with ENOENT,
-				// in which case we can also just quit the supervisor
-				exit_code = EXIT_SUCCESS;
+				// When the child exits, SECCOMP_IOCTL_NOTIF_RECV will return with ENOENT,
+				// in which case we can also just quit the supervisor.
+				// But first we have to retrieve the child's exit code
+				int wstatus;
+				pid_t wait = waitpid(state->task_pid, &wstatus, WUNTRACED | WCONTINUED);
+				if (wait != state->task_pid || !WIFEXITED(wstatus)) {
+					exit_code = EXIT_FAILURE;
+				} else {
+					// Pass over the same exit code
+					exit_code = WEXITSTATUS(wstatus);
+				}
 			} else {
 				perror("ioctl recv");
 			}
