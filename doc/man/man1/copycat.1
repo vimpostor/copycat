@@ -34,7 +34,7 @@ implementation to intercept system calls. This alternative implementation has mi
 Example binaries that do not work with this method include statically linked binaries and binaries that call system calls directly instead of through the libc interface.
 
 .SH EXIT STATUS
-Returns zero on success.
+The exit status will be passed through from the supervised process.
 
 .SH NOTES
 The copycat project site, with more information and the source code repository, can be found at https://github.com/vimpostor/copycat. This tool is currently under development, please report any bugs at the project site or directly to the author.
