@@ -1,6 +1,5 @@
 #define _GNU_SOURCE
 
-#include <assert.h>
 #include <fcntl.h>
 #include <linux/openat2.h>
 #include <stdio.h>
@@ -8,20 +7,22 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 
+#define EXPECT(cond) if (!(cond)) { fprintf(stderr, "Failed assert: %s\n", #cond); exit(EXIT_FAILURE); }
+
 void check_correct_fd(int fd) {
 	static char c;
 
 	// we should be able to read from the file descriptor
 	ssize_t r = read(fd, &c, 1);
-	assert(r);
+	EXPECT(r);
 
 	// the read char should be 'b', and not 'a'
-	assert(c != 'a');
-	assert(c == 'b');
+	EXPECT(c != 'a');
+	EXPECT(c == 'b');
 
 	// close the descriptor again
 	int a = close(fd);
-	assert(!a);
+	EXPECT(!a);
 }
 
 int do_open(const char *filename) {
