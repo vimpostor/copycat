@@ -25,6 +25,13 @@ void check_correct_fd(int fd) {
 	EXPECT(!a);
 }
 
+void setup() {
+	FILE *f = fopen("/tmp/b", "w");
+	EXPECT(f);
+	fprintf(f, "b");
+	fclose(f);
+}
+
 int do_open(const char *filename) {
 	return open(filename, O_RDONLY);
 }
@@ -40,6 +47,8 @@ int do_openat2(const char *filename) {
 
 int main(int argc, char *argv[])
 {
+	setup();
+
 	const char filename[] = "/tmp/a";
 	int f = -1;
 

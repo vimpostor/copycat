@@ -2,9 +2,6 @@
 
 set -e
 
-echo "a" > /tmp/a
-echo "b" > /tmp/b
-echo "c" > /tmp/c
 COPYCAT="/tmp/a /tmp/b" copycat -- tests
 
 echo -e "\nRunning benchmark without interception:"
