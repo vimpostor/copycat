@@ -170,6 +170,7 @@ int handle_req(struct seccomp_notif *req,
 
 	int dirfd = -1, proxy_dirfd = -1;
 	char pathname[PATH_MAX];
+	char proxy_pathname[PATH_MAX];
 	int flags;
 	mode_t mode;
 	struct open_how how;
@@ -240,6 +241,8 @@ int handle_req(struct seccomp_notif *req,
 		perror("pread");
 		goto out;
 	}
+	// Get the redirected file path
+	strcpy(proxy_pathname, find_match(pathname));
 
 	if (nr == __NR_openat2) {
 		// read the special how struct
@@ -282,11 +285,11 @@ int handle_req(struct seccomp_notif *req,
 	// Make the final system call
 	// This will resolve to our overloaded syscall
 	if (nr == __NR_open) {
-		ret = open(pathname, flags, mode);
+		ret = open(proxy_pathname, flags, mode);
 	} else if (nr == __NR_openat) {
-		ret = openat(proxy_dirfd, pathname, flags, mode);
+		ret = openat(proxy_dirfd, proxy_pathname, flags, mode);
 	} else if (nr == __NR_openat2) {
-		ret = openat2(proxy_dirfd, pathname, &how, sizeof(struct open_how));
+		ret = openat2(proxy_dirfd, proxy_pathname, &how, sizeof(struct open_how));
 	}
 
 	if (ret == -1) {
