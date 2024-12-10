@@ -62,6 +62,13 @@ int seccomp_parent(struct seccomp_state *state) {
 		return -1;
 	}
 
+	// first get a pidfd
+	int pidfd = pidfd_open(state->task_pid, 0);
+	if (pidfd < 0) {
+		perror("pidfd_open");
+		return -1;
+	}
+
 	// check for old Linux kernel version
 	struct utsname uts;
 	if (!uname(&uts)) {
@@ -113,7 +120,7 @@ int seccomp_parent(struct seccomp_state *state) {
 			}
 			break;
 		}
-		if (handle_req(req, resp, state->listener) < 0) {
+		if (handle_req(req, resp, state->listener, pidfd) < 0) {
 			break;
 		}
 	}
@@ -121,6 +128,7 @@ int seccomp_parent(struct seccomp_state *state) {
 	// cleanup
 	free(resp);
 	free(req);
+	close(pidfd);
 	close(state->listener);
 	exit(exit_code);
 }
@@ -144,13 +152,23 @@ bool cookie_valid(int listener, struct seccomp_notif *req) {
 	return ioctl(listener, SECCOMP_IOCTL_NOTIF_ID_VALID, &req->id) == 0;
 }
 
+int pidfd_open(pid_t pid, unsigned int flags) {
+	errno = 0;
+	return syscall(__NR_pidfd_open, pid, flags);
+}
+
+int pidfd_getfd(int pidfd, int targetfd, unsigned int flags) {
+	errno = 0;
+	return syscall(__NR_pidfd_getfd, pidfd, targetfd, flags);
+}
+
 int handle_req(struct seccomp_notif *req,
-		      struct seccomp_notif_resp *resp, int listener)
+		      struct seccomp_notif_resp *resp, int listener, int pidfd)
 {
 	char path[PATH_MAX];
 	int ret = -1, mem;
 
-	int dirfd;
+	int dirfd = -1, proxy_dirfd = -1;
 	char pathname[PATH_MAX];
 	int flags;
 	mode_t mode;
@@ -235,6 +253,24 @@ int handle_req(struct seccomp_notif *req,
 		}
 	}
 
+	// Pass-through dirfd from supervised process, in case it is needed for openat.
+	// This is the case if:
+	// - pathname is not absolute
+	// - dirfd is NOT AT_FDCWD
+	//
+	// For more info see man openat(2)
+	if (dirfd >= 0 && pathname[0] != '/') {
+		// duplicate the file descriptor
+		ret = pidfd_getfd(pidfd, dirfd, 0);
+		if (ret < 0) {
+			perror("pidfd_getfd");
+			goto out;
+		} else {
+			printf("Duplicating relative openat dirfd %d...", dirfd);
+			proxy_dirfd = ret;
+		}
+	}
+
 	if (!cookie_valid(listener, req)) {
 		perror("post-read TOCTOU");
 		goto out;
@@ -248,9 +284,9 @@ int handle_req(struct seccomp_notif *req,
 	if (nr == __NR_open) {
 		ret = open(pathname, flags, mode);
 	} else if (nr == __NR_openat) {
-		ret = openat(dirfd, pathname, flags, mode);
+		ret = openat(proxy_dirfd, pathname, flags, mode);
 	} else if (nr == __NR_openat2) {
-		ret = openat2(dirfd, pathname, &how, sizeof(struct open_how));
+		ret = openat2(proxy_dirfd, pathname, &how, sizeof(struct open_how));
 	}
 
 	if (ret == -1) {
@@ -277,6 +313,9 @@ int handle_req(struct seccomp_notif *req,
 		close(addfd.srcfd);
 	}
 out:
+	if (proxy_dirfd >= 0) {
+		close(proxy_dirfd);
+	}
 	close(mem);
 	return ret;
 }

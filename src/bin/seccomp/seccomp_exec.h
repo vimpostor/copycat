@@ -18,4 +18,6 @@ void handle_child_exit(int);
 int seccomp_child(const char *file, char *const argv[], struct seccomp_state *state);
 int seccomp_parent(struct seccomp_state *state);
 int seccomp_exec(const char *file, char *const argv[]);
-int handle_req(struct seccomp_notif *req, struct seccomp_notif_resp *resp, int listener);
+int pidfd_open(pid_t pid, unsigned int flags);
+int pidfd_getfd(int pidfd, int targetfd, unsigned int flags);
+int handle_req(struct seccomp_notif *req, struct seccomp_notif_resp *resp, int listener, int pidfd);
