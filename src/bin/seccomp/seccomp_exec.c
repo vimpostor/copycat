@@ -170,7 +170,7 @@ int handle_req(struct seccomp_notif *req,
 
 	int dirfd = -1, proxy_dirfd = -1;
 	char pathname[PATH_MAX];
-	char proxy_pathname[PATH_MAX];
+	const char *proxy_pathname = NULL;
 	int flags;
 	mode_t mode;
 	struct open_how how;
@@ -191,7 +191,7 @@ int handle_req(struct seccomp_notif *req,
 	}
 	if (!found) {
 		fprintf(stderr, "huh? trapped system call %d that does not appear on our list?\n", req->data.nr);
-		// allow target to continue the syscall normally
+		// continue the syscall normally
 		resp->flags |= SECCOMP_USER_NOTIF_FLAG_CONTINUE;
 		resp->error = 0;
 		resp->val = 0;
@@ -242,7 +242,17 @@ int handle_req(struct seccomp_notif *req,
 		goto out;
 	}
 	// Get the redirected file path
-	strcpy(proxy_pathname, find_match(pathname));
+	if (!find_match(&proxy_pathname, pathname)) {
+		// continue the syscall normally
+		resp->flags |= SECCOMP_USER_NOTIF_FLAG_CONTINUE;
+		resp->error = 0;
+		resp->val = 0;
+		if (ioctl(listener, SECCOMP_IOCTL_NOTIF_SEND, resp) < 0 && errno != ENOENT) {
+			ret = -1;
+			perror("ioctl send");
+		}
+		goto out;
+	}
 
 	if (nr == __NR_openat2) {
 		// read the special how struct

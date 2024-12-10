@@ -101,29 +101,32 @@ void read_config() {
 	fclose(f);
 }
 
-const char *find_match(const char *source) {
+// Returns true if a match was found
+bool find_match(const char **match, const char *query) {
 	for (size_t i = 0; i < rules.size; ++i) {
 		size_t rulesrc_len = strlen(rules.table[i].source);
 		// check if we have a recursive rule (match only prefix) or if we have to check for a literal match
 		size_t chars_to_compare = rulesrc_len;
 		if (!rules.table[i].match_prefix) {
-			chars_to_compare = MAX(chars_to_compare, strlen(source));
+			chars_to_compare = MAX(chars_to_compare, strlen(query));
 		}
 
 		// does the rule match?
-		if (!strncmp(source, rules.table[i].source, chars_to_compare)) {
+		if (!strncmp(query, rules.table[i].source, chars_to_compare)) {
 			char *result = (char *) rules.table[i].dest;
 			if (rules.table[i].replace_prefix_only) {
 				// extend result with rest of the input source
 				// this means we have just replaced the prefix
 				strcpy(path_buffer, result);
 				result = path_buffer;
-				strcat(result, source + rulesrc_len);
+				strcat(result, query + rulesrc_len);
 			}
-			return result;
+			*match = result;
+			return true;
 		}
 	}
-	return source;
+	*match = query;
+	return false;
 }
 
 

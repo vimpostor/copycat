@@ -22,7 +22,7 @@ void add_rule(char *source, char *destination);
 void parse_rule(char *line);
 void parse_rules(char *rls);
 void read_config();
-const char *find_match(const char *source);
+bool find_match(const char **match, const char *query);
 
 long original_openat2(int dirfd, const char *pathname, struct open_how *how, size_t size);
 
