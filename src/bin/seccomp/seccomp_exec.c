@@ -233,10 +233,6 @@ int handle_req(struct seccomp_notif *req,
 	 * before we decide to allow the syscall.
 	 */
 
-	if (nr != __NR_open) {
-		dirfd = ls_int(req->data.args[0]);
-	}
-
 	// the arguments are shifted one to the right for all syscalls but open
 	const int argoffset = nr != __NR_open;
 	ret = pread(mem, pathname, sizeof(pathname), req->data.args[argoffset]);
@@ -244,6 +240,7 @@ int handle_req(struct seccomp_notif *req,
 		perror("pread");
 		goto out;
 	}
+
 	if (nr == __NR_openat2) {
 		// read the special how struct
 		ret = pread(mem, &how, sizeof(how), req->data.args[2]);
@@ -253,6 +250,9 @@ int handle_req(struct seccomp_notif *req,
 		}
 	}
 
+	if (nr != __NR_open) {
+		dirfd = ls_int(req->data.args[0]);
+	}
 	// Pass-through dirfd from supervised process, in case it is needed for openat.
 	// This is the case if:
 	// - pathname is not absolute
