@@ -1,7 +1,6 @@
 #include "copycat.h"
 
 #include <string.h>
-#include <sys/param.h>
 
 #define COPYCAT_ENV "COPYCAT"
 char *copycat_env;
@@ -9,8 +8,6 @@ char *copycat_env;
 #define COPYCAT_CONFIG ".copycat.conf"
 
 char path_buffer[PATH_MAX];
-
-struct original_calls original_calls = {};
 
 #define MAX_RULES_SIZE 64
 struct rule_t {
@@ -129,15 +126,6 @@ bool find_match(const char **match, const char *query) {
 	return false;
 }
 
-
-long original_openat2(int dirfd, const char *pathname, struct open_how *how, size_t size) {
-	/**
-	 * glibc currently does not wrap openat2
-	 * Therefore we must manually implement it via syscall
-	 */
-	return syscall(SYS_openat2, dirfd, pathname, how, size);
-}
-
 void init() {
 	copycat_env = getenv(COPYCAT_ENV);
 	if (copycat_env != NULL) {
@@ -146,10 +134,6 @@ void init() {
 		// read config file instead
 		read_config();
 	}
-
-	original_calls.open = (int (*)(const char *, int, mode_t)) dlsym(RTLD_NEXT, "open");
-	original_calls.openat = (int (*)(int, const char *, int, mode_t)) dlsym(RTLD_NEXT, "openat");
-	original_calls.openat2 = &original_openat2;
 }
 
 void fini() {
