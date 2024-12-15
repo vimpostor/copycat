@@ -182,26 +182,6 @@ int handle_req(struct seccomp_notif *req,
 	resp->val = 0;
 	resp->flags = 0;
 
-#ifndef NDEBUG
-	bool found = false;
-	for (int i = 0; i < ARRAY_SIZE(scalls); ++i) {
-		if (req->data.nr == scalls[i]) {
-			found = true;
-		}
-	}
-	if (!found) {
-		fprintf(stderr, "huh? trapped system call %d that does not appear on our list?\n", req->data.nr);
-		// continue the syscall normally
-		resp->flags |= SECCOMP_USER_NOTIF_FLAG_CONTINUE;
-		resp->error = 0;
-		resp->val = 0;
-		if (ioctl(listener, SECCOMP_IOCTL_NOTIF_SEND, resp) < 0 && errno != ENOENT) {
-			perror("ioctl send");
-		}
-		return -1;
-	}
-#endif
-
 	/*
 	 * Ok, let's read the task's memory to see what they wanted to open
 	 */
@@ -243,7 +223,7 @@ int handle_req(struct seccomp_notif *req,
 	}
 	// Get the redirected file path
 	if (!find_match(&proxy_pathname, pathname)) {
-		// continue the syscall normally
+		// continue the syscall normally if there is no match
 		resp->flags |= SECCOMP_USER_NOTIF_FLAG_CONTINUE;
 		resp->error = 0;
 		resp->val = 0;
