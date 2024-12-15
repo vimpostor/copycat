@@ -1,4 +1,4 @@
-.TH "copycat" 1 "02 May 2022" "redacted@redacted.com" "copycat Documentation"
+.TH "copycat" 1 "02 May 2022" "" "copycat Documentation"
 
 .SH NAME
 copycat \- Intercept system calls
@@ -36,5 +36,17 @@ Example binaries that do not work with this method include statically linked bin
 .SH EXIT STATUS
 The exit status will be passed through from the supervised process.
 
-.SH NOTES
-The copycat project site, with more information and the source code repository, can be found at https://github.com/vimpostor/copycat. This tool is currently under development, please report any bugs at the project site or directly to the author.
+.SH EXAMPLES
+The following example tricks cat into opening a different file than was given.
+.PP
+.in +2n
+.EX
+$ COPYCAT="/tmp/a.txt /tmp/b.txt" \fBcopycat\fP \-\- cat /tmp/a.txt
+.EE
+.in
+.PP
+
+.SH HOMEPAGE
+https://github.com/vimpostor/copycat
+
+Please report bugs and feature requests in the issue tracker.
