@@ -103,19 +103,19 @@ int user_trap_syscalls(const int *nrs, size_t length, unsigned int flags) {
 	struct sock_filter filter[MAX_FILTER_SIZE];
 
 	// load arch
-	filter[0] = (struct sock_filter) {(unsigned short) BPF_LD+BPF_W+BPF_ABS, 0, 0, offsetof(struct seccomp_data, arch)};
+	filter[0] = (struct sock_filter) BPF_STMT(BPF_LD+BPF_W+BPF_ABS, offsetof(struct seccomp_data, arch));
 
 	// check arch
-	filter[1] = (struct sock_filter) {(unsigned short) BPF_JMP+BPF_JEQ+BPF_K, 0, 2, AUDIT_ARCH_X86_64};
+	filter[1] = (struct sock_filter) BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, AUDIT_ARCH_X86_64, 0, 2);
 
 	// load the number of the current syscall
-	filter[2] = (struct sock_filter) {(unsigned short) BPF_LD+BPF_W+BPF_ABS, 0, 0, offsetof(struct seccomp_data, nr)};
+	filter[2] = (struct sock_filter) BPF_STMT(BPF_LD+BPF_W+BPF_ABS, offsetof(struct seccomp_data, nr));
 
 	// for the x32 ABI, all system call numbers have bit 30 set
-	filter[3] = (struct sock_filter) {(unsigned short) BPF_JMP+BPF_JGE+BPF_K, 0, 1, X32_SYSCALL_BIT};
+	filter[3] = (struct sock_filter) BPF_JUMP((unsigned short) BPF_JMP+BPF_JGE+BPF_K, X32_SYSCALL_BIT, 0, 1);
 
 	// terminate the process if one of the earlier checks jumped here
-	filter[4] = (struct sock_filter) {(unsigned short) BPF_RET+BPF_K, 0, 0, SECCOMP_RET_KILL_PROCESS};
+	filter[4] = (struct sock_filter) BPF_STMT((unsigned short) BPF_RET+BPF_K, SECCOMP_RET_KILL_PROCESS);
 
 	// now with the syscall nr still loaded, dynamically add checks for all syscall nrs we want to intercept
 	// Warning: If there are more nrs than MAX_FILTER_SIZE - 3, we may omit some system calls
@@ -134,10 +134,10 @@ int user_trap_syscalls(const int *nrs, size_t length, unsigned int flags) {
 	}
 
 	// didn't find a matching syscall, so return allow
-	filter[bpf_length - 2] = (struct sock_filter) {(unsigned short) BPF_RET+BPF_K, 0, 0, SECCOMP_RET_ALLOW};
+	filter[bpf_length - 2] = (struct sock_filter) BPF_STMT((unsigned short) BPF_RET+BPF_K, SECCOMP_RET_ALLOW);
 
 	// this is the jump target. If we found a matching syscall, we return SECCOMP_RET_USER_NOTIF
-	filter[bpf_length - 1] = (struct sock_filter) {(unsigned short) BPF_RET+BPF_K, 0, 0, SECCOMP_RET_USER_NOTIF};
+	filter[bpf_length - 1] = (struct sock_filter) BPF_STMT((unsigned short) BPF_RET+BPF_K, SECCOMP_RET_USER_NOTIF);
 
 	struct sock_fprog prog = {
 		.len = (unsigned short) bpf_length,
