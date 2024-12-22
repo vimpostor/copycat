@@ -114,8 +114,6 @@ int user_trap_syscalls(const int *nrs, size_t length, unsigned int flags) {
 	filter[i++] = (struct sock_filter) BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_KILL_PROCESS);
 
 	// now with the syscall nr still loaded, dynamically add checks for all syscall nrs we want to intercept
-	// Warning: If there are more nrs than MAX_FILTER_SIZE - 3, we may omit some system calls
-	// But this is still more sane than writing out of bounds
 	for (int j = 0; j < length; ++j) {
 		// jump if equal
 		filter[i].code = (unsigned short) BPF_JMP+BPF_JEQ+BPF_K;

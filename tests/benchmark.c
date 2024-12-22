@@ -1,6 +1,5 @@
 #define _GNU_SOURCE
 
-#include <assert.h>
 #include <fcntl.h>
 #include <linux/openat2.h>
 #include <math.h>
@@ -10,20 +9,22 @@
 #include <time.h>
 #include <unistd.h>
 
+#define EXPECT(cond) if (!(cond)) { fprintf(stderr, "Failed assert: %s\n", #cond); exit(EXIT_FAILURE); }
+
 void check_correct_fd(int fd) {
-	assert(fd >= 0);
+	EXPECT(fd >= 0);
 	static char c;
 
 	// we should be able to read from the file descriptor
 	ssize_t r = read(fd, &c, 1);
-	assert(r);
+	EXPECT(r);
 
 	// the read char should be either 'a' or 'b' or 'c', depending on whether system calls are intercepted and which file is read
-	assert((c == 'a') || (c == 'b') || (c == 'c'));
+	EXPECT((c == 'a') || (c == 'b') || (c == 'c'));
 
 	// close the descriptor again
 	int a = close(fd);
-	assert(!a);
+	EXPECT(!a);
 }
 
 int do_openat(const char *filename) {
