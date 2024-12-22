@@ -74,7 +74,7 @@ int user_trap_syscall(int nr, unsigned int flags)
 {
 	struct sock_filter filter[] = {
 		// Check that architecture matches
-		// https://www.kernel.org/doc/html/v5.0/userspace-api/seccomp_filter.html#pitfalls
+		// https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html#pitfalls
 		BPF_STMT(BPF_LD+BPF_W+BPF_ABS, (offsetof(struct seccomp_data, arch))),
 		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, AUDIT_ARCH_X86_64, 0, 2),
 		BPF_STMT(BPF_LD+BPF_W+BPF_ABS, (offsetof(struct seccomp_data, nr))),
