@@ -95,54 +95,49 @@ int user_trap_syscall(int nr, unsigned int flags)
 }
 
 int user_trap_syscalls(const int *nrs, size_t length, unsigned int flags) {
-	// we need 5 initial check instruction, length many JMP instructions and 2 final RET instructions
-	const int init_length = 5;
-	const int end_length = 2;
-	const int bpf_length = MIN(init_length + length + end_length, MAX_FILTER_SIZE);
-
 	struct sock_filter filter[MAX_FILTER_SIZE];
+	int i = 0;
 
 	// load arch
-	filter[0] = (struct sock_filter) BPF_STMT(BPF_LD+BPF_W+BPF_ABS, offsetof(struct seccomp_data, arch));
+	filter[i++] = (struct sock_filter) BPF_STMT(BPF_LD+BPF_W+BPF_ABS, offsetof(struct seccomp_data, arch));
 
 	// check arch
-	filter[1] = (struct sock_filter) BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, AUDIT_ARCH_X86_64, 0, 2);
+	filter[i++] = (struct sock_filter) BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, AUDIT_ARCH_X86_64, 0, 2);
 
 	// load the number of the current syscall
-	filter[2] = (struct sock_filter) BPF_STMT(BPF_LD+BPF_W+BPF_ABS, offsetof(struct seccomp_data, nr));
+	filter[i++] = (struct sock_filter) BPF_STMT(BPF_LD+BPF_W+BPF_ABS, offsetof(struct seccomp_data, nr));
 
 	// for the x32 ABI, all system call numbers have bit 30 set
-	filter[3] = (struct sock_filter) BPF_JUMP(BPF_JMP+BPF_JGE+BPF_K, X32_SYSCALL_BIT, 0, 1);
+	filter[i++] = (struct sock_filter) BPF_JUMP(BPF_JMP+BPF_JGE+BPF_K, X32_SYSCALL_BIT, 0, 1);
 
 	// terminate the process if one of the earlier checks jumped here
-	filter[4] = (struct sock_filter) BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_KILL_PROCESS);
+	filter[i++] = (struct sock_filter) BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_KILL_PROCESS);
 
 	// now with the syscall nr still loaded, dynamically add checks for all syscall nrs we want to intercept
 	// Warning: If there are more nrs than MAX_FILTER_SIZE - 3, we may omit some system calls
 	// But this is still more sane than writing out of bounds
-	for (int i = 0; i < bpf_length - end_length - init_length; ++i) {
-		const int filter_index = i + init_length;
+	for (int j = 0; j < length; ++j) {
 		// jump if equal
-		filter[filter_index].code = (unsigned short) BPF_JMP+BPF_JEQ+BPF_K;
+		filter[i].code = (unsigned short) BPF_JMP+BPF_JEQ+BPF_K;
 		// if equal (found a matching syscall), jump to early SECCOMP_RET_USER_NOTIF return
-		// the jump distance is the difference between the curent index and the last index (which has index len - 1), but again minus one, because BPF does one implicit jump forward on each instruction
-		filter[filter_index].jt = (bpf_length - 1) - filter_index - 1;
+		// the jump distance is the difference between the current index and the last index of this for loop series (which has index len - 1), plus two to jump from the last index inside the for loop to the actual intended location, but again minus one, because BPF does one implicit jump forward on each instruction
+		filter[i].jt = (length - 1) - j + 2 - 1;
 		// if not equal (no matching syscall yet), try the next syscall nr in the next line (so don't jump at all)
-		filter[filter_index].jf = 0;
+		filter[i].jf = 0;
 		// match against the syscall nr
-		filter[filter_index].k = nrs[i];
+		filter[i++].k = nrs[j];
 	}
 
 	// didn't find a matching syscall, so return allow
-	filter[bpf_length - 2] = (struct sock_filter) BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_ALLOW);
+	filter[i++] = (struct sock_filter) BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_ALLOW);
 
 	// this is the jump target. If we found a matching syscall, we return SECCOMP_RET_USER_NOTIF
-	filter[bpf_length - 1] = (struct sock_filter) BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_USER_NOTIF);
+	filter[i++] = (struct sock_filter) BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_USER_NOTIF);
 
 	struct sock_fprog prog = {
-		.len = (unsigned short) bpf_length,
+		// i points to the next (still unused) index, so it is equal to the actual length
+		.len = (unsigned short) i,
 		.filter = filter,
 	};
-
 	return seccomp(SECCOMP_SET_MODE_FILTER, flags, &prog);
 }
