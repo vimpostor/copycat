@@ -38,7 +38,7 @@ Using this method it is also incredibly cumbersome to overwrite system call argu
 Recent advancements in the [Seccomp Notifier](https://people.kernel.org/brauner/the-seccomp-notifier-cranking-up-the-crazy-with-bpf) API have made it possible to intercept any system call in a much more elegant way.
 This also offers significant speed improvements, now the performance impact is closer to running the application in a container.
 
-For a more detailed explanation see the [accompanying blog posts](https://blog.mggross.com/intercepting-syscalls/).
+For a more detailed explanation see the [accompanying blog post](https://blog.mggross.com/intercepting-syscalls/).
 
 # Rules format
 

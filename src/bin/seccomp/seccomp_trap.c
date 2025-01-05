@@ -70,30 +70,6 @@ int recv_fd(int sock)
 	return *((int *)CMSG_DATA(cmsg));
 }
 
-int user_trap_syscall(int nr, unsigned int flags)
-{
-	struct sock_filter filter[] = {
-		// Check that architecture matches
-		// https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html#pitfalls
-		BPF_STMT(BPF_LD+BPF_W+BPF_ABS, (offsetof(struct seccomp_data, arch))),
-		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, AUDIT_ARCH_X86_64, 0, 2),
-		BPF_STMT(BPF_LD+BPF_W+BPF_ABS, (offsetof(struct seccomp_data, nr))),
-		BPF_JUMP(BPF_JMP+BPF_JGE+BPF_K, X32_SYSCALL_BIT, 0, 1),
-		BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_KILL_PROCESS),
-		// decide wheter to allow the syscall
-		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, nr, 0, 1),
-		BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_USER_NOTIF),
-		BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_ALLOW),
-	};
-
-	struct sock_fprog prog = {
-		.len = (unsigned short)ARRAY_SIZE(filter),
-		.filter = filter,
-	};
-
-	return seccomp(SECCOMP_SET_MODE_FILTER, flags, &prog);
-}
-
 int user_trap_syscalls(const int *nrs, size_t length, unsigned int flags) {
 	struct sock_filter filter[MAX_FILTER_SIZE];
 	int i = 0;
