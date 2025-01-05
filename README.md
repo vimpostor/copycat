@@ -61,4 +61,4 @@ Otherwise the rule matches source literally, i.e. the rule matches only the sing
 
 # Related work
 
-- [kafel](https://github.com/google/kafel) - This uses a similar approach for higher-level policy based filtering. It does not support modifying the arguments of the system calls.
+- [kafel](https://github.com/google/kafel) - This uses a similar approach for higher-level policy based filtering. It does not support modifying arguments of the system calls.
