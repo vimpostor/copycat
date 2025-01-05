@@ -38,6 +38,8 @@ Using this method it is also incredibly cumbersome to overwrite system call argu
 Recent advancements in the [Seccomp Notifier](https://people.kernel.org/brauner/the-seccomp-notifier-cranking-up-the-crazy-with-bpf) API have made it possible to intercept any system call in a much more elegant way.
 This also offers significant speed improvements, now the performance impact is closer to running the application in a container.
 
+For a more detailed explanation see the [accompanying blog posts](https://blog.mggross.com/intercepting-syscalls/).
+
 # Rules format
 
 Rules can be supplied via the `$COPYCAT` environment variable. Alternatively create a file with the name `.copycat.conf` and add the rules, one rule per line.
@@ -56,3 +58,7 @@ Otherwise the rule matches source literally, i.e. the rule matches only the sing
 # Redirect all files and folders in /tmp/f to the single file /etc/f
 /tmp/f/ /etc/f
 ```
+
+# Related work
+
+- [kafel](https://github.com/google/kafel) - This uses a similar approach for higher-level policy based filtering. It does not support modifying the arguments of the system calls.
