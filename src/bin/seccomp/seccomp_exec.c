@@ -295,6 +295,7 @@ int handle_req(struct seccomp_notif *req,
 		addfd.id = req->id;
 		addfd.flags = SECCOMP_ADDFD_FLAG_SEND; // add the fd and return it, atomically
 		addfd.srcfd = ret;
+		resp->val = ret;
 		// note that this branch does not need the SECCOMP_IOCTL_NOTIF_SEND, because this ADDFD call already includes it due to the SECCOMP_ADDFD_FLAG_SEND flag
 		ret = ioctl(listener, SECCOMP_IOCTL_NOTIF_ADDFD, &addfd);
 		if (ret == -1) {
